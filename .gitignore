@@ -1,6 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -9,7 +10,9 @@ __pycache__/
 
 # C extensions
 *.so
-
+# sqlite3
+database.db
+ 
 # Distribution / packaging
 .Python
 build/
