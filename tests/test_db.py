@@ -1,4 +1,5 @@
 from sqlalchemy import select
+
 from fastapi_sincrono.models import User
 
 
