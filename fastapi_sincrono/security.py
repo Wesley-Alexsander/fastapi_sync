@@ -13,13 +13,11 @@ from sqlalchemy.orm import Session
 
 from fastapi_sincrono.database import get_session
 from fastapi_sincrono.models import User
+from fastapi_sincrono.settings import Settings
 
 pwd_context = PasswordHash.recommended()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
-
-SECRET_KEY = 'your-secret-key'
-ALGORITHM = 'HS256'
-ACESS_TOKEN_EXPIRE_MINUTES = 30
+settings = Settings()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token')
 
 
 def get_password_hash(password):
@@ -34,10 +32,12 @@ def create_access_token(data: dict):
     to_encode = data.copy()
 
     expire = datetime.now(tz=ZoneInfo('UTC')) + timedelta(
-        minutes=ACESS_TOKEN_EXPIRE_MINUTES
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     to_encode.update({'exp': expire})
-    emcoded_jwt = encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    emcoded_jwt = encode(
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+    )
     return emcoded_jwt
 
 
@@ -52,12 +52,14 @@ def get_current_user(
     )
 
     try:
-        decoded_token = decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        decoded_token = decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         payload_username = decoded_token.get('sub')
         if not payload_username:
             raise credencials_exception
-    except DecodeError:
-        raise credencials_exception
+    except DecodeError as e:
+        raise credencials_exception from e
 
     user_db = session.scalar(
         select(User).where(User.username == payload_username)

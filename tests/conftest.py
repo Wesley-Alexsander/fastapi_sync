@@ -8,6 +8,7 @@ from fastapi_sincrono.app import app
 from fastapi_sincrono.database import get_session
 from fastapi_sincrono.models import User, table_registry
 from fastapi_sincrono.security import get_password_hash
+from fastapi_sincrono.settings import Settings
 
 
 @pytest.fixture
@@ -69,7 +70,12 @@ def user2(session: Session):
 @pytest.fixture
 def token(client: TestClient, user: User):
     response = client.post(
-        '/token',
+        '/auth/token',
         data={'username': user.username, 'password': user.clean_password},
     )
     return response.json()['access_token']
+
+
+@pytest.fixture
+def settings():
+    return Settings()
