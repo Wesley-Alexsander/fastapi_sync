@@ -79,13 +79,15 @@ def test_read_users_by_id(client, user):
     assert response.json() == user_schema
 
 
-def test_update_user(client, user):
+def test_update_user(client, user, token):
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'TIRex',
             'email': 'TIRex@example.com',
             'password': '1234',
+            'id': user.id,
         },
     )
 
@@ -97,10 +99,11 @@ def test_update_user(client, user):
 
 
 def test_update_user_when_email_already_exists_should_return_409(
-    client, user, user2
+    client, user, user2, token
 ):
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'TIRex',
             'email': 'Duckssauro@teste.com',
@@ -112,9 +115,10 @@ def test_update_user_when_email_already_exists_should_return_409(
     assert response.json() == {'detail': 'Username or Email already exists'}
 
 
-def test_update_user_when_user_not_exists_should_return_404(client):
+def test_update_user_when_user_not_exists_should_return_404(client, token):
     response = client.put(
-        '/users/3',
+        '/users/1000',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'TIRex',
             'email': 'TIRex@example.com',
@@ -122,20 +126,54 @@ def test_update_user_when_user_not_exists_should_return_404(client):
         },
     )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND  # 404
-    assert response.json() == {'detail': 'User Not Found'}
+    assert response.status_code == HTTPStatus.BAD_REQUEST  # 404
+    assert response.json() == {'detail': 'Not enough permissions'}
 
 
-def test_delete_user(client, user):
-    response = client.delete(f'/users/{user.id}')
+def test_delete_user(client, user, token):
+    response = client.delete(
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+    )
     assert response.status_code == HTTPStatus.OK
 
     response = client.get(f'/users/{user.id}')
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_delete_user_when_user_not_exist(client):
-    response = client.delete('/users/1')
+def test_delete_user_when_user_not_exist(client, token):
+    response = client.delete(
+        '/users/1000',
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'User Not Found'}
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json() == {'detail': 'Not enough permissions'}
+
+
+def test_get_token(client, user):
+    response = client.post(
+        '/token',
+        data={
+            'username': user.username,
+            'password': user.clean_password,
+        },
+    )
+    token = response.json()
+
+    assert response.status_code == HTTPStatus.OK
+    assert token['access_token']
+    assert token['token_type'] == 'bearer'
+
+
+def test_get_token_with_incorrect_credentials_should_return_400(client):
+    response = client.post(
+        '/token',
+        data={
+            'username': 'wronguser',
+            'password': 'wrongpassword',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Incorrect Username or password'}

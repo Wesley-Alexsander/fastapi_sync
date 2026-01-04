@@ -8,9 +8,13 @@ dependencies = [
     "alembic>=1.17.2",
     "fastapi[standard]>=0.127.0",
     "ignr>=2.2",
+    "pwdlib[argon2]>=0.3.0",
     "pydantic-settings>=2.12.0",
+    "pyjwt>=2.10.1",
     "pytest>=9.0.2",
+    "python-multipart>=0.0.21",
     "sqlalchemy>=2.0.45",
+    "tzdata>=2025.3",
 ]
 
 [dependency-groups]
@@ -41,7 +45,7 @@ quote-style = 'single'
 run = 'fastapi dev fastapi_sincrono/app.py'
 
 pre_test = 'task lint'
-test = 'pytest -s -x --cov=fastapi_sincrono -vv'
+test = 'pytest -s --cov=fastapi_sincrono -vv'
 post_test = 'coverage html'
 
 lint = 'ruff check . && ruff check . --diff'

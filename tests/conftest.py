@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 from fastapi_sincrono.app import app
 from fastapi_sincrono.database import get_session
 from fastapi_sincrono.models import User, table_registry
+from fastapi_sincrono.security import get_password_hash
 
 
 @pytest.fixture
@@ -38,19 +39,37 @@ def session():
 
 @pytest.fixture
 def user(session: Session):
-    user = User(username='Rex', email='TiRex@teste.com', password='rextest01')
+    pwd = 'rextest01'
+    user = User(
+        username='Rex',
+        email='TiRex@teste.com',
+        password=get_password_hash(pwd),
+    )
     session.add(user)
     session.commit()
     session.refresh(user)
+
+    user.clean_password = pwd  # Monkey patching para testes
     return user
 
 
 @pytest.fixture
 def user2(session: Session):
     user_2 = User(
-        username='Duckssauro', email='Duckssauro@teste.com', password='duckt01'
+        username='Duckssauro',
+        email='Duckssauro@teste.com',
+        password=get_password_hash('duckt01'),
     )
     session.add(user_2)
     session.commit()
     session.refresh(user_2)
     return user
+
+
+@pytest.fixture
+def token(client: TestClient, user: User):
+    response = client.post(
+        '/token',
+        data={'username': user.username, 'password': user.clean_password},
+    )
+    return response.json()['access_token']
