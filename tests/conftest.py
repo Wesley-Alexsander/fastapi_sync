@@ -1,4 +1,5 @@
 import pytest
+from factory import Factory, LazyAttribute, Sequence
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -9,6 +10,15 @@ from fastapi_sincrono.database import get_session
 from fastapi_sincrono.models import User, table_registry
 from fastapi_sincrono.security import get_password_hash
 from fastapi_sincrono.settings import Settings
+
+
+class UserFactory(Factory):
+    class Meta:
+        model = User
+
+    username = Sequence(lambda n: f'user{n}')
+    email = LazyAttribute(lambda obj: f'{obj.username.lower()}@example.com')
+    password = LazyAttribute(lambda obj: f'{obj.username}123')
 
 
 @pytest.fixture
@@ -40,12 +50,8 @@ def session():
 
 @pytest.fixture
 def user(session: Session):
-    pwd = 'rextest01'
-    user = User(
-        username='Rex',
-        email='TiRex@teste.com',
-        password=get_password_hash(pwd),
-    )
+    pwd = 'test01'
+    user = UserFactory(password=get_password_hash(pwd))
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -55,15 +61,14 @@ def user(session: Session):
 
 
 @pytest.fixture
-def user2(session: Session):
-    user_2 = User(
-        username='Duckssauro',
-        email='Duckssauro@teste.com',
-        password=get_password_hash('duckt01'),
-    )
-    session.add(user_2)
+def other_user(session: Session):
+    pwd = 'test01'
+    user = UserFactory(password=get_password_hash(pwd))
+    session.add(user)
     session.commit()
-    session.refresh(user_2)
+    session.refresh(user)
+
+    user.clean_password = pwd  # Monkey patching para testes
     return user
 
 

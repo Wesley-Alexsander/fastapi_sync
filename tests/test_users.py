@@ -24,9 +24,9 @@ def test_create_user_when_email_already_exists_should_return_400(client, user):
     response = client.post(
         '/users/',
         json={
-            'username': 'triceratops',
-            'email': 'TiRex@teste.com',
-            'password': '1234',
+            'username': user.username,
+            'email': user.email,
+            'password': user.clean_password,
         },
     )
 
@@ -40,7 +40,7 @@ def test_create_user_when_username_already_exists_should_return_400(
     response = client.post(
         '/users/',
         json={
-            'username': 'Rex',
+            'username': user.username,
             'email': 'Duckssauro@teste.com',
             'password': '1234',
         },
@@ -93,15 +93,15 @@ def test_update_user(client, user, token):
 
 
 def test_update_user_when_email_already_exists_should_return_409(
-    client, user, user2, token
+    client, user, other_user, token
 ):
     response = client.put(
         f'/users/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
-            'username': 'TIRex',
-            'email': 'Duckssauro@teste.com',
-            'password': '1234',
+            'username': user.username,
+            'email': other_user.email,
+            'password': user.clean_password,
         },
     )
 
@@ -109,18 +109,20 @@ def test_update_user_when_email_already_exists_should_return_409(
     assert response.json() == {'detail': 'Username or Email already exists'}
 
 
-def test_update_user_when_user_not_exists_should_return_404(client, token):
+def test_update_user_when_not_owner_should_return_403(
+    client, other_user, token
+):
     response = client.put(
-        '/users/1000',
-        headers={'Authorization': f'Bearer {token}'},
+        f'/users/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},  # o token do user 1
         json={
-            'username': 'TIRex',
-            'email': 'TIRex@example.com',
-            'password': '1234',
+            'username': other_user.username,
+            'email': other_user.email,
+            'password': other_user.clean_password,
         },
     )
 
-    assert response.status_code == HTTPStatus.BAD_REQUEST  # 404
+    assert response.status_code == HTTPStatus.FORBIDDEN  # 403
     assert response.json() == {'detail': 'Not enough permissions'}
 
 
@@ -135,11 +137,13 @@ def test_delete_user(client, user, token):
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_delete_user_when_user_not_exist(client, token):
+def test_delete_user_when_not_owner_should_return_403(
+    client, other_user, token
+):
     response = client.delete(
-        '/users/1000',
+        f'/users/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
     )
 
-    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.status_code == HTTPStatus.FORBIDDEN
     assert response.json() == {'detail': 'Not enough permissions'}

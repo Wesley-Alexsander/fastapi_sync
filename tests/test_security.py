@@ -23,3 +23,26 @@ def test_jwt_invalid_token(client):
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
     assert response.json() == {'detail': 'Could not validate credentials'}
+
+
+def test_get_user_without_subject(client):
+    token_without_sub = create_access_token(data={})
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': f'Bearer {token_without_sub}'},
+    )
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Could not validate credentials'}
+
+
+def test_get_inexistent_user_token(client):
+    data = {'sub': 'nonexistentuser'}
+    token = create_access_token(data)
+
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Could not validate credentials'}
