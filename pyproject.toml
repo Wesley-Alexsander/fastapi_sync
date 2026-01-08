@@ -47,7 +47,7 @@ quote-style = 'single'
 run = 'fastapi dev fastapi_sincrono/app.py'
 
 pre_test = 'task lint'
-test = 'pytest -s --cov=fastapi_sincrono -vv'
+test = 'pytest --cov=fastapi_sincrono -vv'
 post_test = 'coverage html'
 
 lint = 'ruff check . && ruff check . --diff'
