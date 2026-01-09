@@ -1,27 +1,35 @@
+from datetime import datetime
 from http import HTTPStatus
 
 from fastapi_sincrono.models import TodoStatus
 from tests.conftest import TodoFactory
 
 
-def test_create_todo(client, token):
-    responde = client.post(
+def test_create_todo(client, token, user):
+    todo = TodoFactory(user_id=user.id)
+    response = client.post(
         '/todo/',
         headers={'authorization': f'bearer {token}'},
         json={
-            'title': 'test todo',
-            'description': 'this is a test todo item.',
-            'state': 'pending',
+            'title': todo.title,
+            'description': todo.description,
+            'state': todo.state,
         },
     )
 
-    assert responde.status_code == HTTPStatus.OK
-    assert responde.json() == {
-        'id': 1,
-        'title': 'test todo',
-        'description': 'this is a test todo item.',
-        'state': 'pending',
-    }
+    assert response.status_code == HTTPStatus.OK
+
+    data = response.json()
+
+    assert data['id'] == 1
+    assert data['title'] == todo.title
+    assert data['description'] == todo.description
+    assert data['state'] == todo.state
+
+    # created_at NÃO muda
+    assert datetime.fromisoformat(data['created_at'])
+    # updated_at MUDA
+    assert datetime.fromisoformat(data['updated_at'])
 
 
 def test_list_todos_should_return_5_todos(client, token, user, session):
@@ -143,6 +151,9 @@ def test_patch_todo_should_update_and_return_todo(
     todo = TodoFactory(user_id=user.id)
     session.add(todo)
     session.commit()
+    session.refresh(todo)
+
+    old_updated_at = todo.updated_at
 
     response = client.patch(
         f'/todo/{todo.id}',
@@ -154,12 +165,19 @@ def test_patch_todo_should_update_and_return_todo(
         },
     )
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {
-        'id': todo.id,
-        'title': 'Updated title',
-        'description': 'Updated description',
-        'state': 'doing',
-    }
+
+    data = response.json()
+
+    assert data['id'] == todo.id
+    assert data['title'] == 'Updated title'
+    assert data['description'] == 'Updated description'
+    assert data['state'] == 'doing'
+
+    # created_at NÃO muda
+    assert datetime.fromisoformat(data['created_at']) == todo.created_at
+
+    # updated_at MUDA
+    assert datetime.fromisoformat(data['updated_at']) >= old_updated_at
 
 
 def test_patch_todo_should_return_not_found_message(client, token):
@@ -170,7 +188,7 @@ def test_patch_todo_should_return_not_found_message(client, token):
             'title': 'Updated title',
             'description': 'Updated description',
             'state': 'doing',
-        }
+        },
     )
 
     assert response.status_code == HTTPStatus.NOT_FOUND
